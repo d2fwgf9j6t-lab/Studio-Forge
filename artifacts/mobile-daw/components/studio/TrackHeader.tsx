@@ -11,6 +11,8 @@ export function TrackHeader({
   selected,
   onSelect,
   onMove,
+  compact = false,
+  width = 116,
 }: {
   track: Track;
   index: number;
@@ -18,13 +20,17 @@ export function TrackHeader({
   selected: boolean;
   onSelect: () => void;
   onMove: (direction: -1 | 1) => void;
+  compact?: boolean;
+  width?: number;
 }) {
   const colors = useColors();
   return (
     <View
       style={[
         styles.trackHeader,
+        compact && styles.compactTrackHeader,
         {
+          width,
           backgroundColor: selected ? colors.panelSelected : colors.panel,
           borderColor: selected ? colors.lime : colors.line,
         },
@@ -37,7 +43,13 @@ export function TrackHeader({
         style={styles.trackName}
         testID={`track-select-${track.id}`}
       >
-        <View style={[styles.trackColor, { backgroundColor: track.color }]} />
+        <View
+          style={[
+            styles.trackColor,
+            compact && styles.compactTrackColor,
+            { backgroundColor: track.color },
+          ]}
+        />
         <View style={styles.trackCopy}>
           <Text
             numberOfLines={1}
@@ -45,7 +57,13 @@ export function TrackHeader({
           >
             {track.name}
           </Text>
-          <Text style={[styles.kind, { color: colors.mutedForeground }]}>
+          <Text
+            style={[
+              styles.kind,
+              compact && styles.compactKind,
+              { color: colors.mutedForeground },
+            ]}
+          >
             {track.kind} · {String(index + 1).padStart(2, '0')}
           </Text>
         </View>
@@ -102,11 +120,14 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     justifyContent: 'space-between',
   },
+  compactTrackHeader: { minHeight: 44, paddingHorizontal: 6, paddingVertical: 3 },
   trackName: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   trackColor: { width: 4, height: 29, borderRadius: 2 },
+  compactTrackColor: { height: 20 },
   trackCopy: { flex: 1, minWidth: 0 },
   name: { fontSize: 9, fontWeight: '700' },
   kind: { fontSize: 7, letterSpacing: 0.5, marginTop: 3 },
+  compactKind: { fontSize: 6, letterSpacing: 0.2, marginTop: 1 },
   controls: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingLeft: 10 },
   moveButton: { width: 16, height: 16, alignItems: 'center', justifyContent: 'center' },
   inertChip: {

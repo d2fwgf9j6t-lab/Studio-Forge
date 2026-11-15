@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
@@ -25,6 +26,9 @@ export function StudioFrame({
   onBack?: () => void;
 }) {
   const colors = useColors();
+  const { width, height } = useWindowDimensions();
+  const compactLandscape = width > height && height < 600;
+  const showTitleRow = (title || onBack) && !(compactLandscape && !onBack);
   return (
     <SafeAreaView
       edges={Platform.OS === 'web' ? [] : ['top', 'left', 'right']}
@@ -35,8 +39,14 @@ export function StudioFrame({
       ]}
     >
       <StudioHeader />
-      {(title || onBack) && (
-        <View style={[styles.titleRow, { borderBottomColor: colors.line }]}>
+      {showTitleRow && (
+        <View
+          style={[
+            styles.titleRow,
+            compactLandscape && styles.compactLandscapeTitleRow,
+            { borderBottomColor: colors.line },
+          ]}
+        >
           {onBack && (
             <Pressable
               accessibilityRole="button"
@@ -44,6 +54,7 @@ export function StudioFrame({
               onPress={onBack}
               style={({ pressed }) => [
                 styles.backButton,
+                compactLandscape && styles.compactLandscapeBackButton,
                 { backgroundColor: colors.panel, borderColor: colors.line },
                 pressed && styles.pressed,
               ]}
@@ -52,13 +63,21 @@ export function StudioFrame({
             </Pressable>
           )}
           <View style={styles.titleBlock}>
-            <Text style={[styles.eyebrow, { color: colors.lime }]}>{eyebrow}</Text>
+            {!compactLandscape && (
+              <Text style={[styles.eyebrow, { color: colors.lime }]}>{eyebrow}</Text>
+            )}
             {title && (
-              <Text style={[styles.title, { color: colors.foreground }]}>
+              <Text
+                style={[
+                  styles.title,
+                  compactLandscape && styles.compactLandscapeTitle,
+                  { color: colors.foreground },
+                ]}
+              >
                 {title}
               </Text>
             )}
-            {subtitle && (
+            {subtitle && !compactLandscape && (
               <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
                 {subtitle}
               </Text>
@@ -83,9 +102,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 1,
   },
+  compactLandscapeTitleRow: {
+    minHeight: 34,
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
   titleBlock: { flex: 1 },
   eyebrow: { fontSize: 8, fontWeight: '800', letterSpacing: 1.5 },
   title: { fontSize: 19, fontWeight: '700', marginTop: 2 },
+  compactLandscapeTitle: { fontSize: 14, marginTop: 0 },
   subtitle: { fontSize: 10, marginTop: 3 },
   backButton: {
     width: 34,
@@ -95,6 +121,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  compactLandscapeBackButton: { width: 28, height: 28, borderRadius: 8 },
   body: { flex: 1, minHeight: 0 },
   pressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },
 });

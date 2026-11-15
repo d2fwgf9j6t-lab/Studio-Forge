@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useProject } from '@/contexts/ProjectContext';
@@ -17,11 +18,19 @@ const HEADER_WIDTH = 116;
 const BAR_COUNT = 8;
 const BEATS_PER_BAR = 4;
 
-function TimelineRuler({ barWidth }: { barWidth: number }) {
+function TimelineRuler({
+  barWidth,
+  headerWidth,
+  compact,
+}: {
+  barWidth: number;
+  headerWidth: number;
+  compact: boolean;
+}) {
   const colors = useColors();
   return (
-    <View style={styles.timelineRow}>
-      <View style={[styles.rulerLabel, { borderColor: colors.line }]}>
+    <View style={[styles.timelineRow, compact && styles.compactTimelineRow]}>
+      <View style={[styles.rulerLabel, { width: headerWidth, borderColor: colors.line }]}>
         <Text style={[styles.rulerLabelText, { color: colors.mutedForeground }]}>
           TRACK / BAR
         </Text>
@@ -32,6 +41,7 @@ function TimelineRuler({ barWidth }: { barWidth: number }) {
             key={index}
             style={[
               styles.rulerBar,
+              compact && styles.compactRulerBar,
               {
                 width: barWidth,
                 borderColor: colors.line,
@@ -57,17 +67,30 @@ function TimelineRuler({ barWidth }: { barWidth: number }) {
   );
 }
 
-function ArrangementGrid({ barWidth }: { barWidth: number }) {
+function ArrangementGrid({
+  barWidth,
+  headerWidth,
+  compact,
+}: {
+  barWidth: number;
+  headerWidth: number;
+  compact: boolean;
+}) {
   const colors = useColors();
   const { project, activeTrackId, setActiveTrackId, moveTrack } = useProject();
   return (
     <View>
       {project.tracks.map((track, index) => (
-        <View key={track.id} style={styles.trackLane}>
+        <View
+          key={track.id}
+          style={[styles.trackLane, compact && styles.compactTrackLane]}
+        >
           <TrackHeader
             track={track}
             index={index}
             count={project.tracks.length}
+            width={headerWidth}
+            compact={compact}
             selected={activeTrackId === track.id}
             onSelect={() => setActiveTrackId(track.id)}
             onMove={(direction) => moveTrack(track.id, direction)}
@@ -78,6 +101,7 @@ function ArrangementGrid({ barWidth }: { barWidth: number }) {
                 key={barIndex}
                 style={[
                   styles.gridBar,
+                  compact && styles.compactGridBar,
                   {
                     width: barWidth,
                     borderColor: colors.line,
@@ -100,7 +124,11 @@ function ArrangementGrid({ barWidth }: { barWidth: number }) {
                 ))}
                 {barIndex === 0 && index === 0 && (
                   <Text
-                    style={[styles.dropHint, { color: colors.mutedForeground }]}
+                    style={[
+                      styles.dropHint,
+                      compact && styles.compactDropHint,
+                      { color: colors.mutedForeground },
+                    ]}
                   >
                     EMPTY
                   </Text>
@@ -114,7 +142,7 @@ function ArrangementGrid({ barWidth }: { barWidth: number }) {
   );
 }
 
-function MixerDock() {
+function MixerDock({ compactLandscape }: { compactLandscape: boolean }) {
   const colors = useColors();
   const [expanded, setExpanded] = useState(false);
   return (
@@ -124,7 +152,12 @@ function MixerDock() {
         { backgroundColor: colors.panel, borderColor: colors.line },
       ]}
     >
-      <View style={styles.dockHeading}>
+      <View
+        style={[
+          styles.dockHeading,
+          compactLandscape && styles.compactLandscapeDockHeading,
+        ]}
+      >
         <View style={styles.dockLabel}>
           <Ionicons name="options-outline" size={14} color={colors.cyan} />
           <Text style={[styles.dockTitle, { color: colors.foreground }]}>
@@ -159,32 +192,70 @@ function MixerDock() {
 export function Playlist() {
   const colors = useColors();
   const { project, addTrack } = useProject();
+  const { width, height } = useWindowDimensions();
+  const compactLandscape = width > height && height < 600;
+  const headerWidth = compactLandscape ? 104 : HEADER_WIDTH;
   const [zoom, setZoom] = useState(64);
   const barWidth = zoom;
 
   return (
     <ScrollView
       style={styles.scroll}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        compactLandscape && styles.compactLandscapeContent,
+      ]}
       showsVerticalScrollIndicator={false}
       keyboardDismissMode="on-drag"
     >
-      <View style={styles.workspaceTop}>
-        <View style={styles.projectMeta}>
-          <Text style={[styles.arrangementTag, { color: colors.mutedForeground }]}>
-            ARRANGEMENT
-          </Text>
-          <Text style={[styles.barRange, { color: colors.foreground }]}>
+      <View
+        style={[
+          styles.workspaceTop,
+          compactLandscape && styles.compactLandscapeWorkspaceTop,
+        ]}
+      >
+        <View
+          style={[
+            styles.projectMeta,
+            compactLandscape && styles.compactLandscapeProjectMeta,
+          ]}
+        >
+          {!compactLandscape && (
+            <Text style={[styles.arrangementTag, { color: colors.mutedForeground }]}>
+              ARRANGEMENT
+            </Text>
+          )}
+          <Text
+            style={[
+              styles.barRange,
+              compactLandscape && styles.compactLandscapeBarRange,
+              { color: colors.foreground },
+            ]}
+          >
             BARS 01—08
           </Text>
         </View>
-        <View style={styles.workspaceActions}>
-          <View style={[styles.zoomControl, { borderColor: colors.line }]}>
+        <View
+          style={[
+            styles.workspaceActions,
+            compactLandscape && styles.compactLandscapeWorkspaceActions,
+          ]}
+        >
+          <View
+            style={[
+              styles.zoomControl,
+              compactLandscape && styles.compactLandscapeZoomControl,
+              { borderColor: colors.line },
+            ]}
+          >
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Zoom out"
               onPress={() => setZoom((value) => Math.max(44, value - 8))}
-              style={styles.zoomButton}
+              style={[
+                styles.zoomButton,
+                compactLandscape && styles.compactLandscapeZoomButton,
+              ]}
               testID="zoom-out"
             >
               <Ionicons name="remove" size={13} color={colors.foreground} />
@@ -196,7 +267,10 @@ export function Playlist() {
               accessibilityRole="button"
               accessibilityLabel="Zoom in"
               onPress={() => setZoom((value) => Math.min(96, value + 8))}
-              style={styles.zoomButton}
+              style={[
+                styles.zoomButton,
+                compactLandscape && styles.compactLandscapeZoomButton,
+              ]}
               testID="zoom-in"
             >
               <Ionicons name="add" size={13} color={colors.foreground} />
@@ -208,6 +282,7 @@ export function Playlist() {
             onPress={addTrack}
             style={({ pressed }) => [
               styles.addTrackButton,
+              compactLandscape && styles.compactLandscapeAddTrackButton,
               { backgroundColor: colors.lime },
               pressed && styles.pressed,
             ]}
@@ -221,7 +296,13 @@ export function Playlist() {
         </View>
       </View>
 
-      <View style={[styles.scrollHint, { backgroundColor: colors.panel }]}>
+      <View
+        style={[
+          styles.scrollHint,
+          compactLandscape && styles.compactLandscapeScrollHint,
+          { backgroundColor: colors.panel },
+        ]}
+      >
         <Ionicons name="swap-horizontal" size={13} color={colors.mutedForeground} />
         <Text style={[styles.hintText, { color: colors.mutedForeground }]}>
           SWIPE TO SCROLL THE ARRANGEMENT
@@ -236,24 +317,34 @@ export function Playlist() {
         nestedScrollEnabled
         showsHorizontalScrollIndicator
         style={[styles.gridContainer, { borderColor: colors.line }]}
-        contentContainerStyle={{ minWidth: HEADER_WIDTH + BAR_COUNT * barWidth }}
+        contentContainerStyle={{ minWidth: headerWidth + BAR_COUNT * barWidth }}
       >
         <View>
-          <TimelineRuler barWidth={barWidth} />
-          <ArrangementGrid barWidth={barWidth} />
+          <TimelineRuler
+            barWidth={barWidth}
+            headerWidth={headerWidth}
+            compact={compactLandscape}
+          />
+          <ArrangementGrid
+            barWidth={barWidth}
+            headerWidth={headerWidth}
+            compact={compactLandscape}
+          />
         </View>
       </ScrollView>
 
-      <View style={styles.arrangementFooter}>
-        <Ionicons name="information-circle-outline" size={13} color={colors.mutedForeground} />
-        <Text style={[styles.footerHint, { color: colors.mutedForeground }]}>
-          Empty lanes are ready for clips. Audio placement is not available yet.
-        </Text>
-      </View>
+      {!compactLandscape && (
+        <View style={styles.arrangementFooter}>
+          <Ionicons name="information-circle-outline" size={13} color={colors.mutedForeground} />
+          <Text style={[styles.footerHint, { color: colors.mutedForeground }]}>
+            Empty lanes are ready for clips. Audio placement is not available yet.
+          </Text>
+        </View>
+      )}
 
-      <MixerDock />
+      <MixerDock compactLandscape={compactLandscape} />
 
-      <Pressable
+      {!compactLandscape && <Pressable
         accessibilityRole="button"
         onPress={() => router.navigate('/(tabs)/piano-roll')}
         style={({ pressed }) => [
@@ -275,7 +366,7 @@ export function Playlist() {
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
-      </Pressable>
+      </Pressable>}
     </ScrollView>
   );
 }
@@ -283,16 +374,21 @@ export function Playlist() {
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: 14, paddingBottom: 24, gap: 10 },
+  compactLandscapeContent: { padding: 7, paddingBottom: 9, gap: 5 },
   workspaceTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
   },
+  compactLandscapeWorkspaceTop: { gap: 5 },
   projectMeta: { gap: 4 },
+  compactLandscapeProjectMeta: { gap: 1 },
   arrangementTag: { fontSize: 8, fontWeight: '800', letterSpacing: 1.5 },
   barRange: { fontSize: 15, fontWeight: '700' },
+  compactLandscapeBarRange: { fontSize: 12 },
   workspaceActions: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  compactLandscapeWorkspaceActions: { gap: 5 },
   zoomControl: {
     height: 32,
     borderWidth: 1,
@@ -301,7 +397,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 1,
   },
+  compactLandscapeZoomControl: { height: 28, borderRadius: 7 },
   zoomButton: { width: 26, height: 30, alignItems: 'center', justifyContent: 'center' },
+  compactLandscapeZoomButton: { width: 22, height: 26 },
   zoomText: { fontSize: 7, fontWeight: '800', letterSpacing: 0.8 },
   addTrackButton: {
     height: 32,
@@ -311,6 +409,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
   },
+  compactLandscapeAddTrackButton: { height: 28, paddingHorizontal: 7, borderRadius: 7 },
   addTrackText: { fontSize: 8, fontWeight: '800', letterSpacing: 0.6 },
   scrollHint: {
     minHeight: 28,
@@ -320,6 +419,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  compactLandscapeScrollHint: { minHeight: 21, paddingHorizontal: 6, gap: 4 },
   hintText: { flex: 1, fontSize: 7, fontWeight: '700', letterSpacing: 0.6 },
   trackCount: { fontSize: 7, fontWeight: '800', letterSpacing: 0.6 },
   gridContainer: {
@@ -329,6 +429,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   timelineRow: { flexDirection: 'row', height: 39 },
+  compactTimelineRow: { height: 28 },
   rulerLabel: {
     width: HEADER_WIDTH,
     borderRightWidth: 1,
@@ -346,10 +447,12 @@ const styles = StyleSheet.create({
     paddingTop: 5,
     justifyContent: 'space-between',
   },
+  compactRulerBar: { height: 28, paddingHorizontal: 4, paddingTop: 3 },
   barNumber: { fontSize: 8, fontWeight: '800' },
   beatTicks: { height: 7, flexDirection: 'row', justifyContent: 'space-between' },
   beatTick: { width: 1, height: 6 },
   trackLane: { flexDirection: 'row', minHeight: 68 },
+  compactTrackLane: { minHeight: 44 },
   gridBars: { flexDirection: 'row' },
   gridBar: {
     height: 68,
@@ -357,6 +460,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     position: 'relative',
   },
+  compactGridBar: { height: 44 },
   gridBeat: {
     position: 'absolute',
     top: 0,
@@ -373,6 +477,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.3,
     opacity: 0.5,
   },
+  compactDropHint: { top: 17, left: 6, fontSize: 6, letterSpacing: 0.8 },
   arrangementFooter: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 3 },
   footerHint: { fontSize: 9, flex: 1 },
   mixerDock: { borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
@@ -383,6 +488,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  compactLandscapeDockHeading: { minHeight: 30, paddingHorizontal: 8 },
   dockLabel: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   dockTitle: { fontSize: 8, fontWeight: '800', letterSpacing: 1.1 },
   dockMeta: { fontSize: 7, fontWeight: '700', letterSpacing: 0.4 },

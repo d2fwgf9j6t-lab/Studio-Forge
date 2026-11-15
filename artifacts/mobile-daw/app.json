@@ -3,7 +3,7 @@
     "name": "Northline Studio",
     "slug": "mobile-daw",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon-purple.png",
     "scheme": "mobile-daw",
     "userInterfaceStyle": "dark",

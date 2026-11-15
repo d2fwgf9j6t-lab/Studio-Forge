@@ -1,5 +1,11 @@
 import React from 'react';
-import { Platform, StyleSheet, useColorScheme, View } from 'react-native';
+import {
+  Platform,
+  StyleSheet,
+  useColorScheme,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { Feather } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
@@ -42,7 +48,9 @@ function NativeTabLayout() {
 function ClassicTabLayout() {
   const colors = useColors();
   const colorScheme = useColorScheme();
+  const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const compactLandscape = width > height && height < 600;
   const isDark = colorScheme === 'dark';
   const isIOS = Platform.OS === 'ios';
   const isWeb = Platform.OS === 'web';
@@ -54,18 +62,18 @@ function ClassicTabLayout() {
         tabBarInactiveTintColor: colors.mutedForeground,
         headerShown: false,
         tabBarLabelStyle: {
-          fontSize: 8,
+          fontSize: compactLandscape ? 7 : 8,
           fontWeight: '700',
           letterSpacing: 0.2,
-          marginTop: 1,
+          marginTop: compactLandscape ? 0 : 1,
         },
         tabBarStyle: {
           backgroundColor: isIOS ? 'transparent' : colors.panel,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           elevation: 0,
-          height: isWeb ? 84 : 60 + insets.bottom,
-          paddingTop: 6,
+          height: isWeb ? 84 : compactLandscape ? 44 + insets.bottom : 60 + insets.bottom,
+          paddingTop: compactLandscape ? 2 : 6,
           paddingBottom: isWeb ? 0 : insets.bottom,
         },
         tabBarBackground: () =>
