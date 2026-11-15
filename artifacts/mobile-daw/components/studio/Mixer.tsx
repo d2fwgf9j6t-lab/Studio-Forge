@@ -3,6 +3,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AudioUnavailable } from '@/components/studio/AudioUnavailable';
 import { useColors } from '@/hooks/useColors';
+import { TRACK_COLORS } from '@/types/project';
 
 function MixerStrip({
   name,
@@ -85,10 +86,10 @@ export function MixerSurface({ compact = false }: { compact?: boolean }) {
     name: compact
       ? `CH ${String(index + 1).padStart(2, '0')}`
       : `CHANNEL ${String(index + 1).padStart(2, '0')}`,
-    color: ['#C6F36D', '#78DDE2', '#E6A96B', '#B99AF5'][index % 4],
+    color: TRACK_COLORS[index % TRACK_COLORS.length],
   }));
   if (!compact) {
-    channels.push({ name: 'MASTER', color: colors.lime });
+    channels.push({ name: 'MASTER', color: colors.primary });
   }
 
   return (

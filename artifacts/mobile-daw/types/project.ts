@@ -59,26 +59,26 @@ export interface DawProject {
 }
 
 export const TRACK_COLORS = [
-  '#C6F36D',
-  '#78DDE2',
-  '#E6A96B',
-  '#B99AF5',
-  '#F27E73',
-  '#72B8F4',
-  '#E9D16F',
-  '#D487C8',
+  '#BE96FF',
+  '#916BD2',
+  '#D0B1FF',
+  '#A77CE5',
+  '#7652B3',
+  '#C7A0F7',
+  '#986ECD',
+  '#DDC3FF',
 ];
 
 export function createInitialProject(): DawProject {
-  const names = ['Drums', '808 / Bass', 'Melody', 'Keys', 'Vocal', 'FX'];
+  const trackCount = 6;
   return {
     id: 'project-starter',
     name: 'Untitled session',
     bpm: 120,
     timeSignature: { numerator: 4, denominator: 4 },
-    tracks: names.map((name, index) => ({
+    tracks: Array.from({ length: trackCount }, (_, index) => ({
       id: `track-${index + 1}`,
-      name,
+      name: `Track ${index + 1}`,
       color: TRACK_COLORS[index % TRACK_COLORS.length],
       kind: index === 0 ? 'DRUMS' : index === 1 ? 'BASS' : 'AUDIO',
     })),

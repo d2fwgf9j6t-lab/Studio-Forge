@@ -24,12 +24,13 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
+  const colors = useColors();
   return (
     <Stack
       screenOptions={{
         headerShown: false,
         headerBackTitle: 'Back',
-        contentStyle: { backgroundColor: '#090B0E' },
+        contentStyle: { backgroundColor: colors.background },
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

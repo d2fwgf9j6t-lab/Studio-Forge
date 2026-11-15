@@ -143,6 +143,26 @@ function makeId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+const legacyTrackNames = new Set(['Drums', '808 / Bass', 'Melody', 'Keys', 'Vocal', 'FX']);
+
+function normalizeSavedTrackNames(project: DawProject): DawProject {
+  let changed = false;
+  const tracks = project.tracks.map((track, index) => {
+    if (!legacyTrackNames.has(track.name) && !/^Track \d+$/i.test(track.name)) {
+      return track;
+    }
+
+    const name = `Track ${index + 1}`;
+    const color = TRACK_COLORS[index % TRACK_COLORS.length];
+    if (track.name === name && track.color === color) return track;
+
+    changed = true;
+    return { ...track, name, color };
+  });
+
+  return changed ? { ...project, tracks } : project;
+}
+
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [activeTrackId, setActiveTrackId] = useState(
@@ -169,7 +189,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         ) {
           throw new Error('The saved session has an unexpected format.');
         }
-        dispatch({ type: 'hydrate', project: saved });
+        const normalizedProject = normalizeSavedTrackNames(saved);
+        dispatch({ type: 'hydrate', project: normalizedProject });
         setActiveTrackId(saved.tracks[0]?.id ?? '');
       })
       .catch((error: unknown) => {
@@ -221,7 +242,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       TRACK_COLORS[state.project.tracks.length % TRACK_COLORS.length];
     const track = {
       id,
-      name: `Track ${String(trackNumber).padStart(2, '0')}`,
+      name: `Track ${trackNumber}`,
       color,
       kind: 'AUDIO',
     };

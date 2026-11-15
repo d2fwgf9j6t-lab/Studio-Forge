@@ -4,7 +4,7 @@
     "slug": "mobile-daw",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icon-purple.png",
     "scheme": "mobile-daw",
     "userInterfaceStyle": "dark",
     "ios": {
@@ -12,7 +12,7 @@
     },
     "android": {},
     "web": {
-      "favicon": "./assets/images/icon.png",
+      "favicon": "./assets/images/icon-purple.png",
       "output": "static"
     },
     "plugins": ["expo-router"],
