@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/mobile/"
+title = "Mobile DAW"
+description = "A touch-first music production workspace with an editable arrangement, sound browser, and modular foundation for future audio features."
+version = "1.0.0"
+id = "artifacts/mobile-daw"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/mobile/" ]
+localPort = 24430
+
+[services.development]
+run = "pnpm --filter @workspace/mobile-daw run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/mobile-daw", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/mobile-daw", "run", "serve" ]
+
+[services.env]
+PORT = "24430"
+BASE_PATH = "/mobile/"
