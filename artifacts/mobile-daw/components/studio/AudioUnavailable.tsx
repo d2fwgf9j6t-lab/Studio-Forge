@@ -29,8 +29,8 @@ export function AudioUnavailable({
         </Text>
         {!compact && (
           <Text style={[styles.description, { color: colors.mutedForeground }]}>
-            Playback, recording, monitoring, and mixer controls are disabled in
-            Stage 1. Your project and note edits still save locally.
+            Playback, monitoring, timeline recording, and mixer controls are
+            disabled. Record vocal takes from a Vocals track.
           </Text>
         )}
       </View>

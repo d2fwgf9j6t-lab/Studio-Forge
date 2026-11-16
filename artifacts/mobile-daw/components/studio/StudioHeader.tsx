@@ -30,7 +30,11 @@ function OfflineControl({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityHint="Unavailable until an audio engine is added."
+      accessibilityHint={
+        label === 'Record'
+          ? 'Timeline recording is unavailable. Record from a Vocals track instead.'
+          : 'Unavailable until an audio engine is added.'
+      }
       accessibilityState={{ disabled: true }}
       disabled
       style={({ pressed }) => [

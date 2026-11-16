@@ -14,6 +14,7 @@ import {
   createInitialProject,
   TRACK_COLORS,
   type AssetCategory,
+  type AudioClip,
   type DawProject,
   type ImportedSound,
   type MidiNote,
@@ -126,9 +127,10 @@ interface ProjectContextValue {
   canUndo: boolean;
   canRedo: boolean;
   editProject: (update: (project: DawProject) => DawProject) => void;
-  addTrack: () => void;
+  addTrack: (kind?: 'AUDIO' | 'VOCALS') => string;
   moveTrack: (trackId: string, direction: -1 | 1) => void;
   addSounds: (sounds: ImportedSound[]) => void;
+  addAudioClip: (clip: Omit<AudioClip, 'id'>) => string;
   toggleFavorite: (soundId: string) => void;
   createFolder: (name: string) => void;
   toggleMidiNote: (trackId: string, pitch: number, step: number) => void;
@@ -160,7 +162,10 @@ function normalizeSavedTrackNames(project: DawProject): DawProject {
     return { ...track, name, color };
   });
 
-  return changed ? { ...project, tracks } : project;
+  const audioClips = Array.isArray(project.audioClips) ? project.audioClips : [];
+  if (!Array.isArray(project.audioClips)) changed = true;
+
+  return changed ? { ...project, tracks, audioClips } : project;
 }
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
@@ -235,7 +240,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const addTrack = useCallback(() => {
+  const addTrack = useCallback((kind: 'AUDIO' | 'VOCALS' = 'AUDIO') => {
     const id = makeId('track');
     const trackNumber = state.project.tracks.length + 1;
     const color =
@@ -244,7 +249,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       id,
       name: `Track ${trackNumber}`,
       color,
-      kind: 'AUDIO',
+      kind,
     };
     dispatch({
       type: 'edit',
@@ -252,6 +257,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     });
     setActiveTrackId(id);
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    return id;
   }, [state.project.tracks.length]);
 
   const moveTrack = useCallback(
@@ -277,6 +283,22 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         sounds: [...project.sounds, ...sounds],
       })),
     [editProject],
+  );
+
+  const addAudioClip = useCallback(
+    (clip: Omit<AudioClip, 'id'>) => {
+      if (!state.project.tracks.some((track) => track.id === clip.trackId)) {
+        throw new Error('Choose an existing track before placing audio.');
+      }
+      const id = makeId('clip');
+      editProject((project) => ({
+        ...project,
+        audioClips: [...project.audioClips, { ...clip, id }],
+      }));
+      void Haptics.selectionAsync();
+      return id;
+    },
+    [state.project.tracks, editProject],
   );
 
   const toggleFavorite = useCallback(
@@ -353,6 +375,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       addTrack,
       moveTrack,
       addSounds,
+      addAudioClip,
       toggleFavorite,
       createFolder,
       toggleMidiNote,
@@ -367,6 +390,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       addTrack,
       moveTrack,
       addSounds,
+      addAudioClip,
       toggleFavorite,
       createFolder,
       toggleMidiNote,

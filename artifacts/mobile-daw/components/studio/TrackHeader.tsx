@@ -11,6 +11,7 @@ export function TrackHeader({
   selected,
   onSelect,
   onMove,
+  onRecord,
   compact = false,
   width = 116,
 }: {
@@ -20,6 +21,7 @@ export function TrackHeader({
   selected: boolean;
   onSelect: () => void;
   onMove: (direction: -1 | 1) => void;
+  onRecord?: () => void;
   compact?: boolean;
   width?: number;
 }) {
@@ -99,9 +101,21 @@ export function TrackHeader({
             color={index === count - 1 ? colors.disabled : colors.mutedForeground}
           />
         </Pressable>
-        <View style={[styles.inertChip, { borderColor: colors.line }]}>
-          <Text style={[styles.inertText, { color: colors.disabled }]}>M</Text>
-        </View>
+        {track.kind === 'VOCALS' && onRecord ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Record to ${track.name}`}
+            onPress={onRecord}
+            style={[styles.recordButton, { borderColor: colors.line }]}
+            testID={`record-track-${track.id}`}
+          >
+            <Ionicons name="mic-outline" size={10} color={colors.primary} />
+          </Pressable>
+        ) : (
+          <View style={[styles.inertChip, { borderColor: colors.line }]}>
+            <Text style={[styles.inertText, { color: colors.disabled }]}>M</Text>
+          </View>
+        )}
         <View style={[styles.inertChip, { borderColor: colors.line }]}>
           <Text style={[styles.inertText, { color: colors.disabled }]}>S</Text>
         </View>
@@ -130,6 +144,14 @@ const styles = StyleSheet.create({
   compactKind: { fontSize: 6, letterSpacing: 0.2, marginTop: 1 },
   controls: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingLeft: 10 },
   moveButton: { width: 16, height: 16, alignItems: 'center', justifyContent: 'center' },
+  recordButton: {
+    width: 17,
+    height: 15,
+    borderWidth: 1,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   inertChip: {
     width: 17,
     height: 15,

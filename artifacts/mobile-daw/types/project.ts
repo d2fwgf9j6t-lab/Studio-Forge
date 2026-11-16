@@ -44,6 +44,17 @@ export interface MidiNote {
   step: number;
 }
 
+export interface AudioClip {
+  id: string;
+  trackId: string;
+  name: string;
+  uri: string;
+  startBar: number;
+  durationBars: number;
+  source: 'recording' | 'library';
+  sourceSoundId?: string;
+}
+
 export interface DawProject {
   id: string;
   name: string;
@@ -56,6 +67,7 @@ export interface DawProject {
   sounds: ImportedSound[];
   folders: LibraryFolder[];
   midiNotes: MidiNote[];
+  audioClips: AudioClip[];
 }
 
 export const TRACK_COLORS = [
@@ -85,5 +97,6 @@ export function createInitialProject(): DawProject {
     sounds: [],
     folders: [],
     midiNotes: [],
+    audioClips: [],
   };
 }

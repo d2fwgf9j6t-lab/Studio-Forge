@@ -6,6 +6,7 @@ import {
   Keyboard,
   Modal,
   Pressable,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +16,7 @@ import {
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useColors } from '@/hooks/useColors';
 import { useProject, getCategoryForImport } from '@/contexts/ProjectContext';
+import { copyAudioToAppStorage } from '@/lib/audioFiles';
 import {
   SOUND_CATEGORIES,
   type ImportedSound,
@@ -81,17 +83,30 @@ export function SoundBrowser() {
       });
       if (result.canceled) return;
       const category = getCategoryForImport(activeCategory);
-      const sounds: ImportedSound[] = result.assets.map((asset, index) => ({
-        id: `sound-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`,
-        name: asset.name,
-        uri: asset.uri,
-        mimeType: asset.mimeType ?? undefined,
-        size: asset.size ?? undefined,
-        category,
-        favorite: false,
-        folderId: activeFolderId ?? undefined,
-      }));
+      let hasTemporaryBrowserFiles = false;
+      const sounds: ImportedSound[] = [];
+      for (const [index, asset] of result.assets.entries()) {
+        const id = `sound-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`;
+        const stored = await copyAudioToAppStorage(asset.uri, id);
+        hasTemporaryBrowserFiles ||= !stored.persistent;
+        sounds.push({
+          id,
+          name: asset.name,
+          uri: stored.uri,
+          mimeType: asset.mimeType ?? undefined,
+          size: asset.size ?? stored.size,
+          category,
+          favorite: false,
+          folderId: activeFolderId ?? undefined,
+        });
+      }
       addSounds(sounds);
+      if (hasTemporaryBrowserFiles && Platform.OS === 'web') {
+        Alert.alert(
+          'Browser audio is temporary',
+          'The file is available for this browser session. Re-import it after a reload if it is no longer available.',
+        );
+      }
       Keyboard.dismiss();
     } catch (error) {
       Alert.alert(

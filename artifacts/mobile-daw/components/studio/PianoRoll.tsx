@@ -93,7 +93,7 @@ export function PianoRoll() {
           Add a track to begin
         </Text>
         <Pressable
-          onPress={addTrack}
+          onPress={() => addTrack()}
           accessibilityRole="button"
           accessibilityLabel="Add track"
           style={[styles.addButton, { borderColor: colors.line }]}
