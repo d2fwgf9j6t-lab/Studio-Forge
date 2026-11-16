@@ -17,6 +17,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useColors } from '@/hooks/useColors';
 import { useProject, getCategoryForImport } from '@/contexts/ProjectContext';
 import { copyAudioToAppStorage } from '@/lib/audioFiles';
+import { analyzeAudio } from '@/lib/audioAnalysis';
 import {
   SOUND_CATEGORIES,
   type ImportedSound,
@@ -40,6 +41,15 @@ function formatSize(bytes?: number) {
   if (typeof bytes !== 'number' || bytes <= 0) return 'AUDIO FILE';
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDuration(seconds?: number) {
+  if (!seconds || !Number.isFinite(seconds)) return null;
+
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+
+  return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
 }
 
 export function SoundBrowser() {
@@ -70,6 +80,8 @@ export function SoundBrowser() {
   );
 
   const handleImport = async () => {
+    if (importing) return;
+
     setImporting(true);
 
     try {
@@ -109,6 +121,21 @@ export function SoundBrowser() {
 
         const stored = await copyAudioToAppStorage(asset.uri, id);
 
+        let analysis: {
+          durationSeconds: number;
+          detectedBpm?: number;
+          waveform: number[];
+        } | undefined;
+
+        try {
+          analysis = await analyzeAudio(stored.uri);
+        } catch (analysisError) {
+          console.warn(
+            `Audio analysis failed for ${asset.name}:`,
+            analysisError,
+          );
+        }
+
         sounds.push({
           id,
           name: asset.name,
@@ -118,11 +145,30 @@ export function SoundBrowser() {
           category,
           favorite: false,
           folderId: activeFolderId ?? undefined,
+          durationSeconds: analysis?.durationSeconds,
+          detectedBpm: analysis?.detectedBpm,
+          waveform: analysis?.waveform,
         });
       }
 
       addSounds(sounds);
       Keyboard.dismiss();
+
+      const analyzedCount = sounds.filter(
+        (sound) => sound.durationSeconds,
+      ).length;
+
+      if (analyzedCount < sounds.length) {
+        Alert.alert(
+          'Import complete',
+          `${sounds.length} audio file(s) imported. Some files could not be analyzed, but they were still saved.`,
+        );
+      } else {
+        Alert.alert(
+          'Import complete',
+          `${sounds.length} audio file(s) imported and analyzed.`,
+        );
+      }
     } catch (error) {
       Alert.alert(
         'Import failed',
@@ -153,6 +199,85 @@ export function SoundBrowser() {
     setActiveCategory(category);
     setExpandedCategory((current) =>
       current === category ? null : category,
+    );
+  };
+
+  const renderSound = (sound: ImportedSound) => {
+    const duration = formatDuration(sound.durationSeconds);
+
+    return (
+      <View
+        key={sound.id}
+        style={[
+          styles.soundRow,
+          { borderBottomColor: colors.line },
+        ]}
+      >
+        <View
+          style={[
+            styles.soundGlyph,
+            { backgroundColor: colors.panelRaised },
+          ]}
+        >
+          <Ionicons
+            name="musical-note"
+            size={14}
+            color={colors.cyan}
+          />
+        </View>
+
+        <View style={styles.soundCopy}>
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.soundName,
+              { color: colors.foreground },
+            ]}
+          >
+            {sound.name}
+          </Text>
+
+          <Text
+            style={[
+              styles.soundMeta,
+              { color: colors.mutedForeground },
+            ]}
+          >
+            {formatSize(sound.size)}
+            {duration ? ` · ${duration}` : ''}
+            {sound.detectedBpm ? ` · ${sound.detectedBpm} BPM` : ''}
+          </Text>
+
+          <Text
+            style={[
+              styles.analysisStatus,
+              { color: sound.durationSeconds ? colors.cyan : colors.mutedForeground },
+            ]}
+          >
+            {sound.durationSeconds ? 'ANALYZED AUDIO' : 'SAVED AUDIO'}
+          </Text>
+        </View>
+
+        <Pressable
+          onPress={() => toggleFavorite(sound.id)}
+          accessibilityLabel={
+            sound.favorite
+              ? 'Remove from favorites'
+              : 'Add to favorites'
+          }
+          style={styles.favoriteButton}
+        >
+          <Ionicons
+            name={sound.favorite ? 'heart' : 'heart-outline'}
+            size={17}
+            color={
+              sound.favorite
+                ? colors.coral
+                : colors.mutedForeground
+            }
+          />
+        </Pressable>
+      </View>
     );
   };
 
@@ -211,7 +336,11 @@ export function SoundBrowser() {
               ]}
               testID="import-audio"
             >
-              <Ionicons name="arrow-down" size={16} color={colors.background} />
+              <Ionicons
+                name={importing ? 'hourglass-outline' : 'arrow-down'}
+                size={16}
+                color={colors.background}
+              />
             </Pressable>
           </View>
 
@@ -222,6 +351,7 @@ export function SoundBrowser() {
               </Text>
               <Text style={[styles.subheading, { color: colors.mutedForeground }]}>
                 {project.sounds.length} imported audio files
+                {importing ? ' · IMPORTING AND ANALYZING' : ''}
               </Text>
             </View>
 
@@ -327,70 +457,7 @@ export function SoundBrowser() {
                       ]}
                     >
                       {visibleSounds.length > 0 ? (
-                        visibleSounds.map((sound) => (
-                          <View
-                            key={sound.id}
-                            style={[
-                              styles.soundRow,
-                              { borderBottomColor: colors.line },
-                            ]}
-                          >
-                            <View
-                              style={[
-                                styles.soundGlyph,
-                                { backgroundColor: colors.panelRaised },
-                              ]}
-                            >
-                              <Ionicons
-                                name="musical-note"
-                                size={14}
-                                color={colors.cyan}
-                              />
-                            </View>
-
-                            <View style={styles.soundCopy}>
-                              <Text
-                                numberOfLines={1}
-                                style={[
-                                  styles.soundName,
-                                  { color: colors.foreground },
-                                ]}
-                              >
-                                {sound.name}
-                              </Text>
-                              <Text
-                                style={[
-                                  styles.soundMeta,
-                                  { color: colors.mutedForeground },
-                                ]}
-                              >
-                                {formatSize(sound.size)} · SAVED AUDIO
-                              </Text>
-                            </View>
-
-                            <Pressable
-                              onPress={() => toggleFavorite(sound.id)}
-                              accessibilityLabel={
-                                sound.favorite
-                                  ? 'Remove from favorites'
-                                  : 'Add to favorites'
-                              }
-                              style={styles.favoriteButton}
-                            >
-                              <Ionicons
-                                name={
-                                  sound.favorite ? 'heart' : 'heart-outline'
-                                }
-                                size={17}
-                                color={
-                                  sound.favorite
-                                    ? colors.coral
-                                    : colors.mutedForeground
-                                }
-                              />
-                            </Pressable>
-                          </View>
-                        ))
+                        visibleSounds.map(renderSound)
                       ) : (
                         <View style={styles.emptyCategory}>
                           <Ionicons
@@ -685,6 +752,7 @@ const styles = StyleSheet.create({
   soundCopy: { flex: 1, minWidth: 0, gap: 4 },
   soundName: { fontSize: 10, fontWeight: '700' },
   soundMeta: { fontSize: 7, fontWeight: '700', letterSpacing: 0.4 },
+  analysisStatus: { fontSize: 6, fontWeight: '800', letterSpacing: 0.5 },
   favoriteButton: {
     width: 30,
     height: 36,
@@ -767,4 +835,3 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.55 },
   pressed: { opacity: 0.75, transform: [{ scale: 0.98 }] },
 });
-
