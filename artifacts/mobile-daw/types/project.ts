@@ -30,6 +30,11 @@ export interface ImportedSound {
   category: AssetCategory;
   favorite: boolean;
   folderId?: string;
+
+  // Audio analysis
+  durationSeconds?: number;
+  detectedBpm?: number;
+  waveform?: number[];
 }
 
 export interface LibraryFolder {
@@ -53,6 +58,10 @@ export interface AudioClip {
   durationBars: number;
   source: 'recording' | 'library';
   sourceSoundId?: string;
+
+  // Audio display metadata
+  durationSeconds?: number;
+  waveform?: number[];
 }
 
 export interface DawProject {
@@ -83,11 +92,15 @@ export const TRACK_COLORS = [
 
 export function createInitialProject(): DawProject {
   const trackCount = 6;
+
   return {
     id: 'project-starter',
     name: 'Untitled session',
     bpm: 120,
-    timeSignature: { numerator: 4, denominator: 4 },
+    timeSignature: {
+      numerator: 4,
+      denominator: 4,
+    },
     tracks: Array.from({ length: trackCount }, (_, index) => ({
       id: `track-${index + 1}`,
       name: `Track ${index + 1}`,
