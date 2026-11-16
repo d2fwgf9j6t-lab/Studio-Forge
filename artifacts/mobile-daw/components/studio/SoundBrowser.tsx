@@ -1,3 +1,4 @@
+
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import React, { useMemo, useState } from 'react';
@@ -6,7 +7,6 @@ import {
   Keyboard,
   Modal,
   Pressable,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -44,28 +44,24 @@ function formatSize(bytes?: number) {
 
 export function SoundBrowser() {
   const colors = useColors();
-  const {
-    project,
-    addSounds,
-    toggleFavorite,
-    createFolder,
-  } = useProject();
+  const { project, addSounds, toggleFavorite, createFolder } = useProject();
+
   const [search, setSearch] = useState('');
-  const [expandedCategory, setExpandedCategory] = useState<SoundCategory | null>(
-    'Samples',
-  );
-  const [activeCategory, setActiveCategory] = useState<SoundCategory>('Samples');
+  const [expandedCategory, setExpandedCategory] =
+    useState<SoundCategory | null>('Samples');
+  const [activeCategory, setActiveCategory] =
+    useState<SoundCategory>('Samples');
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [folderOpen, setFolderOpen] = useState(false);
   const [folderName, setFolderName] = useState('');
   const [importing, setImporting] = useState(false);
 
   const query = search.trim().toLowerCase();
+
   const visibleSounds = useMemo(
     () =>
       project.sounds.filter((sound) => {
-        const matchesQuery = sound.name.toLowerCase().includes(query);
-        if (!matchesQuery) return false;
+        if (!sound.name.toLowerCase().includes(query)) return false;
         if (activeFolderId) return sound.folderId === activeFolderId;
         if (activeCategory === 'Favorites') return sound.favorite;
         return sound.category === activeCategory && !sound.folderId;
@@ -75,20 +71,44 @@ export function SoundBrowser() {
 
   const handleImport = async () => {
     setImporting(true);
+
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: 'audio/*',
+        type: '*/*',
         multiple: true,
         copyToCacheDirectory: true,
       });
+
       if (result.canceled) return;
+
+      const audioAssets = result.assets.filter((asset) => {
+        const mime = (asset.mimeType ?? '').toLowerCase();
+        const name = asset.name.toLowerCase();
+
+        return (
+          mime.startsWith('audio/') ||
+          /\.(mp3|wav|m4a|aac|aiff|flac|ogg|opus)$/i.test(name)
+        );
+      });
+
+      if (audioAssets.length === 0) {
+        Alert.alert(
+          'No supported audio',
+          'Choose an MP3, WAV, M4A, AAC, AIFF, FLAC, OGG, or OPUS file.',
+        );
+        return;
+      }
+
       const category = getCategoryForImport(activeCategory);
-      let hasTemporaryBrowserFiles = false;
       const sounds: ImportedSound[] = [];
-      for (const [index, asset] of result.assets.entries()) {
-        const id = `sound-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`;
+
+      for (const [index, asset] of audioAssets.entries()) {
+        const id = `sound-${Date.now()}-${index}-${Math.random()
+          .toString(36)
+          .slice(2, 6)}`;
+
         const stored = await copyAudioToAppStorage(asset.uri, id);
-        hasTemporaryBrowserFiles ||= !stored.persistent;
+
         sounds.push({
           id,
           name: asset.name,
@@ -100,13 +120,8 @@ export function SoundBrowser() {
           folderId: activeFolderId ?? undefined,
         });
       }
+
       addSounds(sounds);
-      if (hasTemporaryBrowserFiles && Platform.OS === 'web') {
-        Alert.alert(
-          'Browser audio is temporary',
-          'The file is available for this browser session. Re-import it after a reload if it is no longer available.',
-        );
-      }
       Keyboard.dismiss();
     } catch (error) {
       Alert.alert(
@@ -122,10 +137,12 @@ export function SoundBrowser() {
 
   const handleCreateFolder = () => {
     const name = folderName.trim();
+
     if (!name) {
       Alert.alert('Folder name required', 'Enter a name for the new folder.');
       return;
     }
+
     createFolder(name);
     setFolderName('');
     setFolderOpen(false);
@@ -134,7 +151,9 @@ export function SoundBrowser() {
   const openCategory = (category: SoundCategory) => {
     setActiveFolderId(null);
     setActiveCategory(category);
-    setExpandedCategory((current) => (current === category ? null : category));
+    setExpandedCategory((current) =>
+      current === category ? null : category,
+    );
   };
 
   return (
@@ -166,14 +185,22 @@ export function SoundBrowser() {
                 testID="sound-search"
               />
               {search.length > 0 && (
-                <Pressable onPress={() => setSearch('')} accessibilityLabel="Clear search">
-                  <Ionicons name="close-circle" size={16} color={colors.mutedForeground} />
+                <Pressable
+                  onPress={() => setSearch('')}
+                  accessibilityLabel="Clear search"
+                >
+                  <Ionicons
+                    name="close-circle"
+                    size={16}
+                    color={colors.mutedForeground}
+                  />
                 </Pressable>
               )}
             </View>
+
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={importing ? 'Importing audio' : 'Import audio files'}
+              accessibilityLabel="Import audio files"
               onPress={handleImport}
               disabled={importing}
               style={({ pressed }) => [
@@ -197,14 +224,12 @@ export function SoundBrowser() {
                 {project.sounds.length} imported audio files
               </Text>
             </View>
+
             <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Create library folder"
               onPress={() => setFolderOpen(true)}
-              style={({ pressed }) => [
+              style={[
                 styles.folderButton,
                 { borderColor: colors.line, backgroundColor: colors.panel },
-                pressed && styles.pressed,
               ]}
               testID="create-folder"
             >
@@ -217,13 +242,17 @@ export function SoundBrowser() {
 
           <View style={styles.categoryList}>
             {SOUND_CATEGORIES.map((category) => {
-              const expanded = expandedCategory === category && !activeFolderId;
+              const expanded =
+                expandedCategory === category && !activeFolderId;
+
               const count =
                 category === 'Favorites'
                   ? project.sounds.filter((sound) => sound.favorite).length
                   : project.sounds.filter(
-                      (sound) => sound.category === category && !sound.folderId,
+                      (sound) =>
+                        sound.category === category && !sound.folderId,
                     ).length;
+
               return (
                 <View
                   key={category}
@@ -233,21 +262,24 @@ export function SoundBrowser() {
                   ]}
                 >
                   <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`${category}, ${count} files`}
-                    accessibilityState={{ expanded }}
                     onPress={() => openCategory(category)}
                     style={[
                       styles.categoryHeader,
-                      { backgroundColor: expanded ? colors.panelSelected : colors.panel },
+                      {
+                        backgroundColor: expanded
+                          ? colors.panelSelected
+                          : colors.panel,
+                      },
                     ]}
-                    testID={`category-${category.toLowerCase().replaceAll(' ', '-')}`}
+                    testID={`category-${category.toLowerCase()}`}
                   >
                     <View
                       style={[
                         styles.categoryIcon,
                         {
-                          backgroundColor: expanded ? colors.limeLow : colors.panelRaised,
+                          backgroundColor: expanded
+                            ? colors.limeLow
+                            : colors.panelRaised,
                         },
                       ]}
                     >
@@ -257,25 +289,43 @@ export function SoundBrowser() {
                         color={expanded ? colors.lime : colors.mutedForeground}
                       />
                     </View>
+
                     <Text
                       style={[
                         styles.categoryName,
-                        { color: expanded ? colors.foreground : colors.mutedForeground },
+                        {
+                          color: expanded
+                            ? colors.foreground
+                            : colors.mutedForeground,
+                        },
                       ]}
                     >
                       {category}
                     </Text>
-                    <Text style={[styles.categoryCount, { color: colors.mutedForeground }]}>
+
+                    <Text
+                      style={[
+                        styles.categoryCount,
+                        { color: colors.mutedForeground },
+                      ]}
+                    >
                       {String(count).padStart(2, '0')}
                     </Text>
+
                     <Ionicons
                       name={expanded ? 'chevron-up' : 'chevron-down'}
                       size={14}
                       color={colors.mutedForeground}
                     />
                   </Pressable>
+
                   {expanded && (
-                    <View style={[styles.categoryContent, { backgroundColor: colors.background }]}>
+                    <View
+                      style={[
+                        styles.categoryContent,
+                        { backgroundColor: colors.background },
+                      ]}
+                    >
                       {visibleSounds.length > 0 ? (
                         visibleSounds.map((sound) => (
                           <View
@@ -285,39 +335,58 @@ export function SoundBrowser() {
                               { borderBottomColor: colors.line },
                             ]}
                           >
-                            <View style={[styles.soundGlyph, { backgroundColor: colors.panelRaised }]}>
+                            <View
+                              style={[
+                                styles.soundGlyph,
+                                { backgroundColor: colors.panelRaised },
+                              ]}
+                            >
                               <Ionicons
                                 name="musical-note"
                                 size={14}
                                 color={colors.cyan}
                               />
                             </View>
+
                             <View style={styles.soundCopy}>
                               <Text
                                 numberOfLines={1}
-                                style={[styles.soundName, { color: colors.foreground }]}
+                                style={[
+                                  styles.soundName,
+                                  { color: colors.foreground },
+                                ]}
                               >
                                 {sound.name}
                               </Text>
-                              <Text style={[styles.soundMeta, { color: colors.mutedForeground }]}>
-                                {formatSize(sound.size)} · PREVIEW UNAVAILABLE
+                              <Text
+                                style={[
+                                  styles.soundMeta,
+                                  { color: colors.mutedForeground },
+                                ]}
+                              >
+                                {formatSize(sound.size)} · SAVED AUDIO
                               </Text>
                             </View>
+
                             <Pressable
-                              accessibilityRole="button"
+                              onPress={() => toggleFavorite(sound.id)}
                               accessibilityLabel={
                                 sound.favorite
-                                  ? `Remove ${sound.name} from favorites`
-                                  : `Add ${sound.name} to favorites`
+                                  ? 'Remove from favorites'
+                                  : 'Add to favorites'
                               }
-                              onPress={() => toggleFavorite(sound.id)}
                               style={styles.favoriteButton}
-                              testID={`favorite-${sound.id}`}
                             >
                               <Ionicons
-                                name={sound.favorite ? 'heart' : 'heart-outline'}
+                                name={
+                                  sound.favorite ? 'heart' : 'heart-outline'
+                                }
                                 size={17}
-                                color={sound.favorite ? colors.coral : colors.mutedForeground}
+                                color={
+                                  sound.favorite
+                                    ? colors.coral
+                                    : colors.mutedForeground
+                                }
                               />
                             </Pressable>
                           </View>
@@ -329,13 +398,23 @@ export function SoundBrowser() {
                             size={19}
                             color={colors.mutedForeground}
                           />
-                          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+                          <Text
+                            style={[
+                              styles.emptyTitle,
+                              { color: colors.foreground },
+                            ]}
+                          >
                             {query ? 'No matching sounds' : 'Nothing imported yet'}
                           </Text>
-                          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                          <Text
+                            style={[
+                              styles.emptyText,
+                              { color: colors.mutedForeground },
+                            ]}
+                          >
                             {query
                               ? 'Try a different search or category.'
-                              : 'Import an audio file to add it to this category.'}
+                              : 'Import an audio file to add it here.'}
                           </Text>
                         </View>
                       )}
@@ -347,14 +426,24 @@ export function SoundBrowser() {
           </View>
 
           <View style={styles.foldersHeading}>
-            <Ionicons name="folder-open-outline" size={14} color={colors.cyan} />
+            <Ionicons
+              name="folder-open-outline"
+              size={14}
+              color={colors.cyan}
+            />
             <Text style={[styles.foldersTitle, { color: colors.foreground }]}>
               YOUR FOLDERS
             </Text>
-            <Text style={[styles.categoryCount, { color: colors.mutedForeground }]}>
+            <Text
+              style={[
+                styles.categoryCount,
+                { color: colors.mutedForeground },
+              ]}
+            >
               {project.folders.length}
             </Text>
           </View>
+
           {project.folders.length === 0 ? (
             <Text style={[styles.noFolders, { color: colors.mutedForeground }]}>
               Create folders to organize imported files.
@@ -365,6 +454,7 @@ export function SoundBrowser() {
               const folderSounds = project.sounds.filter(
                 (sound) => sound.folderId === folder.id,
               );
+
               return (
                 <Pressable
                   key={folder.id}
@@ -375,17 +465,23 @@ export function SoundBrowser() {
                   style={[
                     styles.folderRow,
                     {
-                      backgroundColor: active ? colors.panelSelected : colors.panel,
+                      backgroundColor: active
+                        ? colors.panelSelected
+                        : colors.panel,
                       borderColor: active ? colors.limeLine : colors.line,
                     },
                   ]}
-                  testID={`folder-${folder.id}`}
                 >
                   <Ionicons name="folder" size={16} color={colors.cyan} />
                   <Text style={[styles.folderName, { color: colors.foreground }]}>
                     {folder.name}
                   </Text>
-                  <Text style={[styles.categoryCount, { color: colors.mutedForeground }]}>
+                  <Text
+                    style={[
+                      styles.categoryCount,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
                     {folderSounds.length}
                   </Text>
                   <Ionicons
@@ -393,10 +489,16 @@ export function SoundBrowser() {
                     size={14}
                     color={colors.mutedForeground}
                   />
+
                   {active && (
                     <View style={styles.folderContent}>
                       {folderSounds.length === 0 ? (
-                        <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                        <Text
+                          style={[
+                            styles.emptyText,
+                            { color: colors.mutedForeground },
+                          ]}
+                        >
                           Import files while this folder is selected.
                         </Text>
                       ) : (
@@ -404,7 +506,10 @@ export function SoundBrowser() {
                           <Text
                             key={sound.id}
                             numberOfLines={1}
-                            style={[styles.folderSoundName, { color: colors.foreground }]}
+                            style={[
+                              styles.folderSoundName,
+                              { color: colors.foreground },
+                            ]}
                           >
                             {sound.name}
                           </Text>
@@ -429,7 +534,10 @@ export function SoundBrowser() {
           <View
             style={[
               styles.folderModal,
-              { backgroundColor: colors.panelRaised, borderColor: colors.line },
+              {
+                backgroundColor: colors.panelRaised,
+                borderColor: colors.line,
+              },
             ]}
           >
             <Text style={[styles.modalTitle, { color: colors.foreground }]}>
@@ -452,20 +560,34 @@ export function SoundBrowser() {
                   color: colors.foreground,
                 },
               ]}
-              testID="folder-name-input"
             />
             <View style={styles.modalActions}>
-              <Pressable onPress={() => setFolderOpen(false)} style={styles.cancelButton}>
-                <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>
+              <Pressable
+                onPress={() => setFolderOpen(false)}
+                style={styles.cancelButton}
+              >
+                <Text
+                  style={[
+                    styles.cancelText,
+                    { color: colors.mutedForeground },
+                  ]}
+                >
                   CANCEL
                 </Text>
               </Pressable>
               <Pressable
                 onPress={handleCreateFolder}
-                style={[styles.createButton, { backgroundColor: colors.lime }]}
-                testID="confirm-folder"
+                style={[
+                  styles.createButton,
+                  { backgroundColor: colors.lime },
+                ]}
               >
-                <Text style={[styles.createText, { color: colors.background }]}>
+                <Text
+                  style={[
+                    styles.createText,
+                    { color: colors.background },
+                  ]}
+                >
                   CREATE FOLDER
                 </Text>
               </Pressable>
@@ -517,7 +639,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
   },
-  folderButtonText: { fontSize: 7, fontWeight: '800', letterSpacing: 0.65 },
+  folderButtonText: {
+    fontSize: 7,
+    fontWeight: '800',
+    letterSpacing: 0.65,
+  },
   categoryList: { gap: 6 },
   categoryBlock: { borderWidth: 1, borderRadius: 10, overflow: 'hidden' },
   categoryHeader: {
@@ -535,7 +661,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   categoryName: { flex: 1, fontSize: 11, fontWeight: '700' },
-  categoryCount: { fontSize: 8, fontWeight: '800', minWidth: 18, textAlign: 'right' },
+  categoryCount: {
+    fontSize: 8,
+    fontWeight: '800',
+    minWidth: 18,
+    textAlign: 'right',
+  },
   categoryContent: { paddingHorizontal: 9 },
   soundRow: {
     minHeight: 52,
@@ -554,12 +685,32 @@ const styles = StyleSheet.create({
   soundCopy: { flex: 1, minWidth: 0, gap: 4 },
   soundName: { fontSize: 10, fontWeight: '700' },
   soundMeta: { fontSize: 7, fontWeight: '700', letterSpacing: 0.4 },
-  favoriteButton: { width: 30, height: 36, alignItems: 'center', justifyContent: 'center' },
-  emptyCategory: { minHeight: 112, alignItems: 'center', justifyContent: 'center', gap: 5 },
+  favoriteButton: {
+    width: 30,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyCategory: {
+    minHeight: 112,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
   emptyTitle: { fontSize: 10, fontWeight: '700', marginTop: 2 },
   emptyText: { fontSize: 9, textAlign: 'center', lineHeight: 14 },
-  foldersHeading: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 5 },
-  foldersTitle: { flex: 1, fontSize: 8, fontWeight: '800', letterSpacing: 1.1 },
+  foldersHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginTop: 5,
+  },
+  foldersTitle: {
+    flex: 1,
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+  },
   noFolders: { fontSize: 9, lineHeight: 15, paddingHorizontal: 2 },
   folderRow: {
     minHeight: 42,
@@ -572,7 +723,12 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   folderName: { flex: 1, fontSize: 10, fontWeight: '700' },
-  folderContent: { width: '100%', paddingBottom: 8, paddingLeft: 24, gap: 6 },
+  folderContent: {
+    width: '100%',
+    paddingBottom: 8,
+    paddingLeft: 24,
+    gap: 6,
+  },
   folderSoundName: { fontSize: 9 },
   modalScrim: {
     flex: 1,
@@ -580,7 +736,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 22,
   },
-  folderModal: { padding: 18, borderWidth: 1, borderRadius: 18 },
+  folderModal: {
+    padding: 18,
+    borderWidth: 1,
+    borderRadius: 18,
+  },
   modalTitle: { fontSize: 17, fontWeight: '700', marginBottom: 13 },
   folderInput: {
     height: 46,
@@ -589,11 +749,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 14,
   },
-  modalActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginTop: 16 },
+  modalActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 16,
+  },
   cancelButton: { paddingVertical: 10, paddingHorizontal: 5 },
   cancelText: { fontSize: 8, fontWeight: '800', letterSpacing: 0.7 },
-  createButton: { paddingHorizontal: 12, paddingVertical: 11, borderRadius: 9 },
+  createButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    borderRadius: 9,
+  },
   createText: { fontSize: 8, fontWeight: '800', letterSpacing: 0.5 },
   disabled: { opacity: 0.55 },
   pressed: { opacity: 0.75, transform: [{ scale: 0.98 }] },
 });
+
